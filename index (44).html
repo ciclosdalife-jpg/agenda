@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Calendário Escolar — abrindo…</title>
+<meta name="theme-color" content="#0b3f9e">
+<style>
+:root{--az:#1565d8;--az2:#0b3f9e;--vd:#2bb24c;--mut:#cfe0ff}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;
+ font-family:'Trebuchet MS',system-ui,sans-serif;color:#fff;text-align:center;
+ background:radial-gradient(900px 500px at 15% -5%,#2f8fe0 0%,transparent 60%),
+  radial-gradient(800px 600px at 95% 10%,#13b981 0%,transparent 55%),
+  linear-gradient(165deg,#0a2f7d 0%,#0b47a0 45%,#073b74 100%) fixed}
+.cx{max-width:430px;width:100%}
+.esc{width:86px;height:86px;margin:0 auto 18px;border-radius:24px;background:#fff;display:flex;
+ align-items:center;justify-content:center;font-size:44px;box-shadow:0 14px 34px #00163a66}
+h1{font-size:23px;margin:0 0 6px}
+p{color:var(--mut);font-size:15px;line-height:1.5;margin:0 0 18px}
+.carga{height:6px;border-radius:99px;background:#ffffff2e;overflow:hidden;margin:22px 0 14px}
+.carga i{display:block;height:100%;width:40%;border-radius:99px;background:linear-gradient(90deg,var(--vd),#7ee2a8);
+ animation:anda 1.1s infinite ease-in-out}
+@keyframes anda{0%{margin-left:-40%}100%{margin-left:100%}}
+a.b,button.b{display:inline-block;background:var(--vd);color:#fff;border:0;border-radius:12px;padding:13px 26px;
+ font:inherit;font-weight:700;font-size:16px;cursor:pointer;text-decoration:none;margin:4px}
+a.b:hover,button.b:hover{background:#14803a}
+button.s{background:#ffffff1f;border:1px solid #ffffff59;color:#fff;border-radius:12px;padding:11px 20px;
+ font:inherit;cursor:pointer;margin:4px}
+.erro{background:#ffffff14;border:1px solid #ffffff2e;border-radius:16px;padding:18px}
+.erro h2{font-size:18px;margin:0 0 8px}
+small{display:block;color:#ffffff8f;font-size:12.5px;margin-top:16px;line-height:1.5}
+</style></head><body>
+<div class="cx" id="tela"></div>
+<script>
+/* ===========================================================
+   Esta página fica num endereço FIXO (GitHub Pages) e manda a
+   pessoa para o endereço de hoje do sistema, que muda a cada vez
+   que o túnel reinicia. O programa no computador da secretaria
+   grava esse endereço no arquivo url.json deste mesmo repositório.
+   =========================================================== */
+const SISTEMA='Calendário Escolar';
+const ICONE='📅';
+
+/* descobre sozinho usuário/repositório pelo endereço desta página */
+const USER=location.hostname.split('.')[0];
+const REPO=location.pathname.split('/').filter(Boolean)[0]||'';
+const FONTES=[
+  'url.json?t='+Date.now(),                                                  /* a própria página (mais rápido) */
+  `https://raw.githubusercontent.com/${USER}/${REPO}/main/url.json?t=`+Date.now(),
+  `https://raw.githubusercontent.com/${USER}/${REPO}/master/url.json?t=`+Date.now()
+];
+const el=document.getElementById('tela');
+const guardado=k=>{try{return localStorage.getItem(k)}catch(e){return null}};
+const guardar=(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}};
+
+function procurando(){el.innerHTML=`<div class="esc">${ICONE}</div>
+  <h1>${SISTEMA}</h1><p>Procurando o endereço de hoje…</p>
+  <div class="carga"><i></i></div>`}
+
+function vai(url){
+  guardar('ultimo',url);
+  el.innerHTML=`<div class="esc">${ICONE}</div><h1>Abrindo o ${SISTEMA}</h1>
+    <p>Se não abrir sozinho em alguns segundos, toque no botão.</p>
+    <a class="b" href="${url}">Abrir agora</a>`;
+  location.replace(url);
+}
+
+function semSinal(motivo){
+  const u=guardado('ultimo');
+  el.innerHTML=`<div class="esc">${ICONE}</div><h1>${SISTEMA}</h1>
+    <div class="erro"><h2>Não encontrei o sistema agora</h2>
+    <p>${motivo}</p>
+    <button class="b" onclick="tentar()">Tentar de novo</button>
+    ${u?`<br><button class="s" onclick="location.href='${u}'">Tentar o último endereço</button>`:''}
+    </div>
+    <small>Se continuar assim, avise a secretaria: o computador que hospeda o sistema
+    precisa estar ligado e com o programa do túnel aberto.</small>`;
+}
+
+async function tentar(){
+  procurando();
+  for(const fonte of FONTES){
+    try{
+      const r=await fetch(fonte,{cache:'no-store'});
+      if(!r.ok)continue;
+      const d=await r.json();
+      if(d&&d.url&&/^https:\/\//.test(d.url))return vai(d.url);
+    }catch(e){/* tenta a próxima fonte */}
+  }
+  semSinal('O endereço de hoje ainda não foi publicado, ou o sistema está desligado no momento.');
+}
+tentar();
+/* se a pessoa deixar esta tela aberta, continua tentando sozinho */
+setInterval(()=>{if(document.querySelector('.erro'))tentar()},20000);
+</script></body></html>
